@@ -4,7 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'services/timer_service.dart';
 import 'screens/home_screen.dart';
 
+import 'package:timezone/data/latest.dart' as tz;
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
   runApp(const TimerApp());
 }
 

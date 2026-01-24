@@ -124,7 +124,7 @@ class _SequenceConfigSheetState extends State<SequenceConfigSheet> {
                           ),
                         ),
                       )
-                      .toList(),
+                      ,
                   const Gap(8),
                   const Divider(),
                   const Gap(8),

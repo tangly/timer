@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:gap/gap.dart';
 import '../models/trigger.dart'; // Added import
 import '../services/timer_service.dart';
+import 'create_trigger_screen.dart';
 import '../widgets/timer_controls.dart';
 import '../widgets/sequence_config_sheet.dart';
 
@@ -155,12 +156,23 @@ class HomeScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           children: [
-                            Icon(
-                              isActive
-                                  ? Icons.notifications_active
-                                  : Icons.notifications_outlined,
-                              color: isActive ? Colors.amber : Colors.grey,
-                              size: 16,
+                            GestureDetector(
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CreateTriggerScreen(triggerToEdit: t),
+                                  ),
+                                );
+                              },
+                              child: Icon(
+                                isActive
+                                    ? Icons.notifications_active
+                                    : Icons.notifications_outlined,
+                                color: isActive ? Colors.amber : Colors.grey,
+                                size: 16,
+                              ),
                             ),
                             const Gap(8),
                             Expanded(

@@ -14,7 +14,7 @@ class StorageService {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       return jsonList.map((j) => Trigger.fromJson(j)).toList();
     } catch (e) {
-      print('Error loading saved triggers: $e');
+      //print('Error loading saved triggers: $e');
       return [];
     }
   }
@@ -22,10 +22,12 @@ class StorageService {
   Future<void> saveTrigger(Trigger trigger) async {
     final triggers = await loadSavedTriggers();
     // Check if ID exists (update) or add new
-    // For now, let's just append. User can delete.
-    // Actually, distinct IDs.
-    // If saving a new trigger from Create Screen, it will have a new ID.
-    triggers.add(trigger);
+    final index = triggers.indexWhere((t) => t.id == trigger.id);
+    if (index >= 0) {
+      triggers[index] = trigger;
+    } else {
+      triggers.add(trigger);
+    }
     await _saveList(triggers);
   }
 

@@ -23,7 +23,7 @@ class FeedbackService {
     try {
       await _audioPlayer.play(AssetSource('sounds/beep.mp3'));
     } catch (e) {
-      print('Error playing sound: $e');
+      //print('Error playing sound: $e');
     }
   }
 

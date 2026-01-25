@@ -157,17 +157,37 @@ class Trigger {
     'sequenceRepeatCount': sequenceRepeatCount,
   };
 
-  factory Trigger.fromJson(Map<String, dynamic> json) => Trigger(
-    id: json['id'] as String,
-    type: TriggerType.values[json['type'] as int],
-    action: TriggerAction.values[json['action'] as int],
-    enabled: json['enabled'] as bool? ?? true,
-    description: json['description'] as String?,
-    intervalSeconds: json['intervalSeconds'] as int?,
-    repeatCount: json['repeatCount'] as int?,
-    sequenceSteps: (json['sequenceSteps'] as List<dynamic>?)
-        ?.map((e) => SequenceStep.fromJson(e as Map<String, dynamic>))
-        .toList(),
-    sequenceRepeatCount: json['sequenceRepeatCount'] as int?,
-  );
+  factory Trigger.fromJson(Map<String, dynamic> json) {
+    // Handle triggers created before 'action' field or invalid index
+    TriggerAction safeAction = TriggerAction.soundAndVibrate;
+    if (json['action'] is int) {
+      final index = json['action'] as int;
+      if (index >= 0 && index < TriggerAction.values.length) {
+        safeAction = TriggerAction.values[index];
+      }
+    }
+
+    // Handle triggers with potential type issues
+    TriggerType safeType = TriggerType.interval;
+    if (json['type'] is int) {
+      final index = json['type'] as int;
+      if (index >= 0 && index < TriggerType.values.length) {
+        safeType = TriggerType.values[index];
+      }
+    }
+
+    return Trigger(
+      id: json['id'] as String,
+      type: safeType,
+      action: safeAction,
+      enabled: json['enabled'] as bool? ?? true,
+      description: json['description'] as String?,
+      intervalSeconds: json['intervalSeconds'] as int?,
+      repeatCount: json['repeatCount'] as int?,
+      sequenceSteps: (json['sequenceSteps'] as List<dynamic>?)
+          ?.map((e) => SequenceStep.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      sequenceRepeatCount: json['sequenceRepeatCount'] as int?,
+    );
+  }
 }

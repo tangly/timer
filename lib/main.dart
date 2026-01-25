@@ -6,9 +6,12 @@ import 'screens/home_screen.dart';
 
 import 'package:timezone/data/latest.dart' as tz;
 
-void main() {
+import 'services/background_service.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   tz.initializeTimeZones();
+  await BackgroundService.initializeService();
   runApp(const TimerApp());
 }
 

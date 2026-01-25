@@ -8,7 +8,8 @@ import '../services/timer_service.dart';
 import '../services/storage_service.dart';
 
 class CreateTriggerScreen extends StatefulWidget {
-  const CreateTriggerScreen({super.key});
+  final Trigger? triggerToEdit;
+  const CreateTriggerScreen({super.key, this.triggerToEdit});
 
   @override
   State<CreateTriggerScreen> createState() => _CreateTriggerScreenState();
@@ -38,7 +39,55 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _addSequenceStep(); // Start with one empty step
+
+    if (widget.triggerToEdit != null) {
+      _loadTriggerData(widget.triggerToEdit!);
+    } else {
+      _addSequenceStep(); // Start with one empty step
+    }
+  }
+
+  void _loadTriggerData(Trigger t) {
+    _selectedAction = t.action;
+
+    if (t.type == TriggerType.interval) {
+      _tabController.index = 0;
+      if (t.intervalSeconds != null) {
+        _intervalMinCtrl.text = (t.intervalSeconds! ~/ 60).toString();
+        _intervalSecCtrl.text = (t.intervalSeconds! % 60).toString();
+      }
+      if (t.repeatCount != null) {
+        _intervalRepeatCtrl.text = t.repeatCount.toString();
+      } else {
+        _intervalRepeatCtrl.text = '0';
+      }
+      if (t.description != null) {
+        _intervalDescCtrl.text = t.description!;
+      }
+      // Ensure at least one sequence step exists even if not on that tab
+      _addSequenceStep();
+    } else {
+      _tabController.index = 1;
+      if (t.sequenceSteps != null) {
+        for (final step in t.sequenceSteps!) {
+          _sequenceSteps.add((
+            min: TextEditingController(text: (step.duration ~/ 60).toString()),
+            sec: TextEditingController(text: (step.duration % 60).toString()),
+            desc: TextEditingController(text: step.description ?? ''),
+          ));
+        }
+      }
+      if (_sequenceSteps.isEmpty) _addSequenceStep();
+
+      if (t.sequenceRepeatCount != null) {
+        _sequenceRepeatCtrl.text = t.sequenceRepeatCount.toString();
+      } else {
+        _sequenceRepeatCtrl.text = '0';
+      }
+      if (t.description != null) {
+        _sequenceDescCtrl.text = t.description!;
+      }
+    }
   }
 
   void _addSequenceStep() {
@@ -65,6 +114,9 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
   final _intervalDescCtrl = TextEditingController();
   final _sequenceDescCtrl = TextEditingController();
 
+  // Trigger Action State
+  TriggerAction _selectedAction = TriggerAction.soundAndVibrate;
+
   @override
   void dispose() {
     _intervalMinCtrl.dispose();
@@ -85,6 +137,9 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
   void _saveTrigger() {
     final timerService = context.read<TimerService>();
     Trigger? newTrigger;
+
+    // If editing, use existing ID, else generate new
+    final triggerId = widget.triggerToEdit?.id ?? _uuid.v4();
 
     if (_tabController.index == 0) {
       // Interval Mode
@@ -112,8 +167,9 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
       }
 
       newTrigger = Trigger(
-        id: _uuid.v4(),
+        id: triggerId,
         type: TriggerType.interval,
+        action: _selectedAction,
         intervalSeconds: totalSeconds,
         repeatCount: repeatCount,
         description: description,
@@ -150,22 +206,33 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
       }
 
       newTrigger = Trigger(
-        id: _uuid.v4(),
+        id: triggerId,
         type: TriggerType.sequence,
+        action: _selectedAction,
         sequenceSteps: sequenceSteps,
         sequenceRepeatCount: repeatCount,
         description: description,
       );
     }
 
-    timerService.addTrigger(newTrigger);
+    if (widget.triggerToEdit != null) {
+      timerService.updateTrigger(newTrigger);
+    } else {
+      timerService.addTrigger(newTrigger);
+    }
 
     // Persist for reuse
     StorageService().saveTrigger(newTrigger);
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Trigger added and saved to library!')),
+      SnackBar(
+        content: Text(
+          widget.triggerToEdit != null
+              ? 'Trigger updated!'
+              : 'Trigger added and saved to library!',
+        ),
+      ),
     );
   }
 
@@ -173,7 +240,9 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Trigger'),
+        title: Text(
+          widget.triggerToEdit != null ? 'Edit Trigger' : 'New Trigger',
+        ),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -185,12 +254,48 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _saveTrigger,
         icon: const Icon(Icons.check),
-        label: const Text('Save & Add'),
+        label: Text(widget.triggerToEdit != null ? 'Update' : 'Save & Add'),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [_buildIntervalForm(), _buildSequenceForm()],
       ),
+    );
+  }
+
+  Widget _buildActionSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Trigger Action:', style: Theme.of(context).textTheme.titleMedium),
+        const Gap(8),
+        SegmentedButton<TriggerAction>(
+          segments: const [
+            ButtonSegment(
+              value: TriggerAction.sound,
+              icon: Icon(Icons.music_note),
+              label: Text('Sound'),
+            ),
+            ButtonSegment(
+              value: TriggerAction.vibrate,
+              icon: Icon(Icons.vibration),
+              label: Text('Vibrate'),
+            ),
+            ButtonSegment(
+              value: TriggerAction.soundAndVibrate,
+              icon: Icon(Icons.notifications_active),
+              label: Text('Both'),
+            ),
+          ],
+          selected: {_selectedAction},
+          onSelectionChanged: (Set<TriggerAction> newSelection) {
+            setState(() {
+              _selectedAction = newSelection.first;
+            });
+          },
+          showSelectedIcon: false,
+        ),
+      ],
     );
   }
 
@@ -228,6 +333,10 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
               ),
             ],
           ),
+          const Gap(24),
+          const Divider(),
+          const Gap(16),
+          _buildActionSelector(),
           const Gap(24),
           const Divider(),
           const Gap(16),
@@ -332,6 +441,10 @@ class _CreateTriggerScreenState extends State<CreateTriggerScreen>
           icon: const Icon(Icons.add),
           label: const Text('Add Step'),
         ),
+        const Gap(24),
+        const Divider(),
+        const Gap(16),
+        _buildActionSelector(),
         const Gap(24),
         const Divider(),
         const Gap(16),
